@@ -1,12 +1,17 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local LockMechanism = {}
 
-local APPROACH_DISTANCE = 50
-local HOLD_DURATION = 2
-local RELEASE_DURATION = 2
+local APPROACH_DISTANCE = 10
+local HOLD_DURATION = 1
 
--- Table to keep track of locked pairs (we can use this later for UI/Audio)
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local ReleaseLockEvent = Instance.new("RemoteEvent")
+ReleaseLockEvent.Name = "ReleaseLockEvent"
+ReleaseLockEvent.Parent = Shared
+
+-- Table to keep track of locked pairs
 local activeLocks = {}
 
 -- Function to lock two players together
@@ -53,6 +58,10 @@ local function LockPlayers(approacher, target)
     hrpA.CFrame = CFrame.lookAt(posA, lookPosA)
     hrpB.CFrame = CFrame.lookAt(posB, lookPosB)
 
+    -- Store the lock in the dictionary
+    activeLocks[approacher] = target
+    activeLocks[target] = approacher
+
     -- Disable both of their ProximityPrompts so no one else can interact with them
     local promptA = hrpA:FindFirstChild("ApproachPrompt")
     local promptB = hrpB:FindFirstChild("ApproachPrompt")
@@ -60,47 +69,54 @@ local function LockPlayers(approacher, target)
     if promptA then promptA.Enabled = false end
     if promptB then promptB.Enabled = false end
 
-    -- Create a temporary Release Prompt on the Approacher for the Target to use
-    local releasePrompt = Instance.new("ProximityPrompt")
-    releasePrompt.Name = "ReleasePrompt"
-    releasePrompt.ActionText = "Release Lock"
-    releasePrompt.ObjectText = approacher.DisplayName
-    releasePrompt.HoldDuration = RELEASE_DURATION
-    releasePrompt.KeyboardKeyCode = Enum.KeyCode.E
-    releasePrompt.RequiresLineOfSight = false
-    releasePrompt.MaxActivationDistance = APPROACH_DISTANCE
-    releasePrompt.Parent = hrpA
+    -- Tell BOTH players to show their UI!
+    ReleaseLockEvent:FireClient(target, "Show", false) -- isApproacher = false
+    ReleaseLockEvent:FireClient(approacher, "Show", true)  -- isApproacher = true
+end
 
-    -- Function to unlock them
-    local function UnlockPlayers()
-        if not charA or not charB then return end
+-- Global function to unlock whoever the player is currently locked to
+local function UnlockPlayer(player)
+    local target = activeLocks[player]
+    if not target then return end
 
-        print("Lock released between " .. approacher.Name .. " and " .. target.Name)
+    print("Lock released between " .. player.Name .. " and " .. target.Name)
 
+    -- Tell both clients to hide their UI
+    ReleaseLockEvent:FireClient(player, "Hide")
+    ReleaseLockEvent:FireClient(target, "Hide")
+
+    -- Remove from lock table
+    activeLocks[player] = nil
+    activeLocks[target] = nil
+
+    local charA = player.Character
+    local charB = target.Character
+
+    if charA then
         charA:SetAttribute("IsLocked", false)
-        charB:SetAttribute("IsLocked", false)
-
+        local humA = charA:FindFirstChild("Humanoid")
         if humA then
             humA.WalkSpeed = 16
             humA.JumpPower = 50
         end
+        local hrpA = charA:FindFirstChild("HumanoidRootPart")
+        if hrpA and hrpA:FindFirstChild("ApproachPrompt") then
+            hrpA.ApproachPrompt.Enabled = true
+        end
+    end
+
+    if charB then
+        charB:SetAttribute("IsLocked", false)
+        local humB = charB:FindFirstChild("Humanoid")
         if humB then
             humB.WalkSpeed = 16
             humB.JumpPower = 50
         end
-
-        if promptA then promptA.Enabled = true end
-        if promptB then promptB.Enabled = true end
-
-        releasePrompt:Destroy()
-    end
-
-    -- Listen for the target to release the lock
-    releasePrompt.Triggered:Connect(function(triggeringPlayer)
-        if triggeringPlayer == target then
-            UnlockPlayers()
+        local hrpB = charB:FindFirstChild("HumanoidRootPart")
+        if hrpB and hrpB:FindFirstChild("ApproachPrompt") then
+            hrpB.ApproachPrompt.Enabled = true
         end
-    end)
+    end
 end
 
 -- Setup player when they spawn
@@ -141,6 +157,16 @@ function LockMechanism.Init()
     for _, player in ipairs(Players:GetPlayers()) do
         SetupPlayer(player)
     end
+
+    -- Listen for clients pressing the UI button
+    ReleaseLockEvent.OnServerEvent:Connect(function(player)
+        UnlockPlayer(player)
+    end)
+
+    -- Handle player disconnecting while locked
+    Players.PlayerRemoving:Connect(function(player)
+        UnlockPlayer(player)
+    end)
 end
 
 return LockMechanism

@@ -10,8 +10,14 @@ local function HideOwnPrompt(character)
 
     local prompt = hrp:WaitForChild("ApproachPrompt", 5)
     if prompt then
-        -- This only disables it on OUR screen, other players can still see it!
+        -- Force it off now
         prompt.Enabled = false
+        -- If the server tries to turn it back on, force it off again!
+        prompt:GetPropertyChangedSignal("Enabled"):Connect(function()
+            if prompt.Enabled then
+                prompt.Enabled = false
+            end
+        end)
     end
 end
 
@@ -22,4 +28,7 @@ localPlayer.CharacterAdded:Connect(HideOwnPrompt)
 if localPlayer.Character then
     HideOwnPrompt(localPlayer.Character)
 end
+
+local ReactionUI = require(script.Parent:WaitForChild("ReactionUI"))
+ReactionUI.Init()
 
