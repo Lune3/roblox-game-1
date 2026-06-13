@@ -1,1 +1,4 @@
-print("Approach a Baddie Server Started")
+print("Aura Simulator Server Started")
+
+local LockMechanism = require(script.Parent:WaitForChild("LockMechanism"))
+LockMechanism.Init()
