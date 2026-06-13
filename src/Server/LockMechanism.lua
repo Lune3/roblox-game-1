@@ -5,11 +5,17 @@ local LockMechanism = {}
 
 local APPROACH_DISTANCE = 10
 local HOLD_DURATION = 1
+local DEFAULT_APPROACHER_COOLDOWN = 10 -- 10 seconds default spam cooldown
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+
 local ReleaseLockEvent = Instance.new("RemoteEvent")
 ReleaseLockEvent.Name = "ReleaseLockEvent"
 ReleaseLockEvent.Parent = Shared
+
+local UpdateSettingsEvent = Instance.new("RemoteEvent")
+UpdateSettingsEvent.Name = "UpdateSettingsEvent"
+UpdateSettingsEvent.Parent = Shared
 
 -- Table to keep track of locked pairs
 local activeLocks = {}
@@ -58,9 +64,13 @@ local function LockPlayers(approacher, target)
     hrpA.CFrame = CFrame.lookAt(posA, lookPosA)
     hrpB.CFrame = CFrame.lookAt(posB, lookPosB)
 
-    -- Store the lock in the dictionary
-    activeLocks[approacher] = target
-    activeLocks[target] = approacher
+    -- Anchor them so nobody can push them around
+    hrpA.Anchored = true
+    hrpB.Anchored = true
+
+    -- Store the lock in the dictionary with roles
+    activeLocks[approacher] = { target = target, isApproacher = true }
+    activeLocks[target] = { target = approacher, isApproacher = false }
 
     -- Disable both of their ProximityPrompts so no one else can interact with them
     local promptA = hrpA:FindFirstChild("ApproachPrompt")
@@ -76,14 +86,24 @@ end
 
 -- Global function to unlock whoever the player is currently locked to
 local function UnlockPlayer(player)
-    local target = activeLocks[player]
-    if not target then return end
+    local lockData = activeLocks[player]
+    if not lockData then return end
+
+    local target = lockData.target
 
     print("Lock released between " .. player.Name .. " and " .. target.Name)
 
     -- Tell both clients to hide their UI
     ReleaseLockEvent:FireClient(player, "Hide")
     ReleaseLockEvent:FireClient(target, "Hide")
+
+    -- Apply Approacher spam cooldown
+    if activeLocks[player].isApproacher then
+        player:SetAttribute("NextApproachTime", os.time() + DEFAULT_APPROACHER_COOLDOWN)
+    end
+    if activeLocks[target].isApproacher then
+        target:SetAttribute("NextApproachTime", os.time() + DEFAULT_APPROACHER_COOLDOWN)
+    end
 
     -- Remove from lock table
     activeLocks[player] = nil
@@ -100,8 +120,14 @@ local function UnlockPlayer(player)
             humA.JumpPower = 50
         end
         local hrpA = charA:FindFirstChild("HumanoidRootPart")
-        if hrpA and hrpA:FindFirstChild("ApproachPrompt") then
-            hrpA.ApproachPrompt.Enabled = true
+        if hrpA then
+            hrpA.Anchored = false
+            local cooldownA = player:GetAttribute("ApproachCooldown") or 5
+            task.delay(cooldownA, function()
+                if hrpA and hrpA:FindFirstChild("ApproachPrompt") and not charA:GetAttribute("IsLocked") then
+                    hrpA.ApproachPrompt.Enabled = true
+                end
+            end)
         end
     end
 
@@ -113,8 +139,14 @@ local function UnlockPlayer(player)
             humB.JumpPower = 50
         end
         local hrpB = charB:FindFirstChild("HumanoidRootPart")
-        if hrpB and hrpB:FindFirstChild("ApproachPrompt") then
-            hrpB.ApproachPrompt.Enabled = true
+        if hrpB then
+            hrpB.Anchored = false
+            local cooldownB = target:GetAttribute("ApproachCooldown") or 5
+            task.delay(cooldownB, function()
+                if hrpB and hrpB:FindFirstChild("ApproachPrompt") and not charB:GetAttribute("IsLocked") then
+                    hrpB.ApproachPrompt.Enabled = true
+                end
+            end)
         end
     end
 end
@@ -124,6 +156,11 @@ local function SetupPlayer(player)
     player.CharacterAdded:Connect(function(character)
         -- Ensure they start unlocked
         character:SetAttribute("IsLocked", false)
+
+        -- Set a default cooldown of 5 seconds for testing (players can change this later via UI)
+        if not player:GetAttribute("ApproachCooldown") then
+            player:SetAttribute("ApproachCooldown", 5)
+        end
 
         local hrp = character:WaitForChild("HumanoidRootPart", 5)
         if not hrp then return end
@@ -143,6 +180,14 @@ local function SetupPlayer(player)
         prompt.Triggered:Connect(function(triggeringPlayer)
             -- You can't approach yourself
             if triggeringPlayer == player then return end
+
+            -- Check if Approacher is on spam cooldown
+            local nextTime = triggeringPlayer:GetAttribute("NextApproachTime")
+            if nextTime and os.time() < nextTime then
+                local timeLeft = nextTime - os.time()
+                print(triggeringPlayer.Name .. " is on approach cooldown for " .. timeLeft .. " more seconds.")
+                return
+            end
             
             -- Lock them together
             LockPlayers(triggeringPlayer, player)
@@ -166,6 +211,16 @@ function LockMechanism.Init()
     -- Handle player disconnecting while locked
     Players.PlayerRemoving:Connect(function(player)
         UnlockPlayer(player)
+    end)
+
+    -- Handle setting updates
+    UpdateSettingsEvent.OnServerEvent:Connect(function(player, newCooldown)
+        if type(newCooldown) == "number" then
+            -- Clamp the value between 0 seconds and 3600 seconds (1 hour) to prevent crashing
+            local clamped = math.clamp(math.floor(newCooldown), 0, 3600)
+            player:SetAttribute("ApproachCooldown", clamped)
+            print(player.Name .. " updated their cooldown to " .. clamped .. " seconds.")
+        end
     end)
 end
 

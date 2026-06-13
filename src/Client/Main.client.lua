@@ -32,3 +32,6 @@ end
 local ReactionUI = require(script.Parent:WaitForChild("ReactionUI"))
 ReactionUI.Init()
 
+local SettingsUI = require(script.Parent:WaitForChild("SettingsUI"))
+SettingsUI.Init()
+
