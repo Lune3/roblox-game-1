@@ -216,8 +216,8 @@ function LockMechanism.Init()
     -- Handle setting updates
     UpdateSettingsEvent.OnServerEvent:Connect(function(player, newCooldown)
         if type(newCooldown) == "number" then
-            -- Clamp the value between 0 seconds and 3600 seconds (1 hour) to prevent crashing
-            local clamped = math.clamp(math.floor(newCooldown), 0, 3600)
+            -- Clamp the value between 0 seconds and 1000 seconds (15 minutes) to prevent crashing
+            local clamped = math.clamp(math.floor(newCooldown), 0, 1000)
             player:SetAttribute("ApproachCooldown", clamped)
             print(player.Name .. " updated their cooldown to " .. clamped .. " seconds.")
         end

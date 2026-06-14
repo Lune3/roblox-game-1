@@ -15,11 +15,12 @@ function SettingsUI.Init()
     screenGui.ResetOnSpawn = false
     screenGui.Parent = playerGui
 
-    -- Settings Button (Top Left)
+    -- Settings Button (Top Right)
     local openBtn = Instance.new("TextButton")
     openBtn.Name = "OpenSettingsBtn"
     openBtn.Size = UDim2.new(0, 100, 0, 40)
-    openBtn.Position = UDim2.new(0, 20, 0, 20)
+    openBtn.AnchorPoint = Vector2.new(1, 1)
+    openBtn.Position = UDim2.new(1, -20, 1, -20)
     openBtn.Text = "Settings"
     openBtn.TextSize = 18
     openBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
