@@ -2,9 +2,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ReleaseLockEvent = Shared:WaitForChild("ReleaseLockEvent")
+local ReactionEvent = Shared:WaitForChild("ReactionEvent")
 
 local ReactionUI = {}
 
@@ -76,6 +78,8 @@ function ReactionUI.Init()
         "Cringe"
     }
 
+    local onCooldown = false
+
     for _, optName in ipairs(options) do
         local btn = Instance.new("TextButton")
         btn.Name = optName .. "Btn"
@@ -93,21 +97,42 @@ function ReactionUI.Init()
         btn.Parent = matrixFrame
         
         btn.MouseButton1Click:Connect(function()
-            print("Clicked reaction: " .. optName)
+            if onCooldown then return end
+            onCooldown = true
+            
+            -- UI stays visible, but goes on a local 5-second cooldown
+            ReactionEvent:FireServer(optName)
+            
+            task.delay(5, function()
+                onCooldown = false
+            end)
         end)
     end
 
     local renderConnection = nil
+    local cameraConnection = nil
 
     local function show3DUI()
         uiPart.Parent = camera
         surfaceGui.Enabled = true
-        -- Update the position every frame so it stays locked to the camera
+        
         renderConnection = RunService.RenderStepped:Connect(function()
-            -- Position: 4 studs to the right, 1 stud down, 10 studs forward
-            -- Rotation: 180 on Y (to face camera) + 15 degrees for the slant
-            local offset = CFrame.new(4, -1, -10) * CFrame.Angles(0, math.rad(180 + 15), 0)
-            uiPart.CFrame = camera.CFrame * offset
+            -- === MATRIX UI ADJUSTMENT VALUES ===
+            -- offsetX: Moves the menu left (negative) or right (positive) on your screen.
+            -- offsetY: Moves the menu down (negative) or up (positive) on your screen.
+            -- offsetZ: Distance from camera. Keep around -10 so it avoids camera blur!
+            -- slantAngle: The 3D rotation tilt of the board in degrees. 
+            
+            local offsetX = 8
+            local offsetY = -1
+            local offsetZ = -10
+            local slantAngle = 15 -- Degrees it tilts
+            
+            -- We add 180 to the angle so the invisible part's front faces the camera
+            local rotation = CFrame.Angles(0, math.rad(180 + slantAngle), 0)
+            local offsetCFrame = CFrame.new(offsetX, offsetY, offsetZ) * rotation
+            
+            uiPart.CFrame = camera.CFrame * offsetCFrame
         end)
     end
 
@@ -120,11 +145,54 @@ function ReactionUI.Init()
         end
     end
 
+    local function lockCamera(isApproacher)
+        local char = player.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        camera.CameraType = Enum.CameraType.Scriptable
+
+        cameraConnection = RunService.RenderStepped:Connect(function()
+            -- === CAMERA ADJUSTMENT VALUES ===
+            -- X_OFFSET: Moves camera left (negative) or right (positive). 
+            --           Right now, Approacher is +3 (right shoulder), Target is -3 (left shoulder).
+            -- Y_OFFSET: Moves camera up (positive) or down (negative) relative to the player's root.
+            -- Z_OFFSET: Moves camera backward (positive) or forward (negative).
+            -- LOOK_OFFSET_Y: Moves the focal point (what the camera is staring at) up or down.
+            -- LOOK_DISTANCE: How many studs ahead the camera looks to frame the other player.
+            
+            local xOffset = isApproacher and 5 or -5 
+            local yOffset = isApproacher and 2 or 2
+            local zOffset = isApproacher and 5 or 8 -- 5 for Approacher, 8 for Target (zoomed out more)
+            
+            local lookOffsetY = 1.5
+            local lookDistance = 8
+
+            -- Calculate the exact position of the camera behind the player
+            local camPos = hrp.CFrame * CFrame.new(xOffset, yOffset, zOffset)
+            
+            -- Calculate the point the camera should look at (roughly at the other player's face)
+            local lookAtPos = hrp.Position + (hrp.CFrame.LookVector * lookDistance) + Vector3.new(0, lookOffsetY, 0)
+
+            -- Set the camera to that position and look at the target point
+            camera.CFrame = CFrame.lookAt(camPos.Position, lookAtPos)
+        end)
+    end
+
+    local function unlockCamera()
+        if cameraConnection then
+            cameraConnection:Disconnect()
+            cameraConnection = nil
+        end
+        camera.CameraType = Enum.CameraType.Custom
+    end
+
     -- Listen for server telling us we are locked or unlocked
     ReleaseLockEvent.OnClientEvent:Connect(function(action, isApproacher)
         if action == "Hide" then
             notInterestedBtn.Visible = false
             hide3DUI()
+            unlockCamera()
             ProximityPromptService.Enabled = true
             return
         end
@@ -136,10 +204,12 @@ function ReactionUI.Init()
             notInterestedBtn.Text = "End Conversation"
             notInterestedBtn.Visible = true
             hide3DUI() -- Approacher does NOT see the matrix
+            lockCamera(true)
         else
             notInterestedBtn.Text = "Not Interested"
             notInterestedBtn.Visible = true
             show3DUI() -- ONLY Target sees the matrix
+            lockCamera(false)
         end
     end)
 
@@ -147,7 +217,77 @@ function ReactionUI.Init()
     notInterestedBtn.MouseButton1Click:Connect(function()
         notInterestedBtn.Visible = false
         hide3DUI()
+        unlockCamera()
         ReleaseLockEvent:FireServer()
+    end)
+
+    -- Listen for server to show floating text
+    ReactionEvent.OnClientEvent:Connect(function(targetChar, scoreChange)
+        local hrp = targetChar:FindFirstChild("HumanoidRootPart")
+        if not hrp then return end
+
+        -- === FLOATING TEXT TWEAK VALUES ===
+        -- START_OFFSET: Where the text spawns relative to the Target's HumanoidRootPart.
+        --               Z is positive so it starts BEHIND the target's back.
+        -- FLOAT_HEIGHT: How many studs the text rises up.
+        -- TWEEN_DURATION: How many seconds the animation takes.
+        
+        local START_OFFSET = Vector3.new(0, 2, 2) 
+        local FLOAT_HEIGHT = 4
+        local TWEEN_DURATION = 2.5
+        
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "RizzScoreVFX"
+        billboard.Size = UDim2.new(0, 200, 0, 100)
+        billboard.StudsOffset = START_OFFSET
+        billboard.AlwaysOnTop = true
+        billboard.Adornee = hrp
+        
+        local textLabel = Instance.new("TextLabel")
+        textLabel.Size = UDim2.new(1, 0, 1, 0)
+        textLabel.BackgroundTransparency = 1
+        textLabel.Font = Enum.Font.GothamBlack
+        textLabel.TextSize = 50
+        
+        if scoreChange > 0 then
+            textLabel.Text = "+" .. tostring(scoreChange)
+            textLabel.TextColor3 = Color3.fromRGB(50, 255, 100) -- Green
+        elseif scoreChange < 0 then
+            textLabel.Text = tostring(scoreChange)
+            textLabel.TextColor3 = Color3.fromRGB(255, 50, 50) -- Red
+        else
+            textLabel.Text = "0"
+            textLabel.TextColor3 = Color3.fromRGB(200, 200, 200) -- Gray
+        end
+        
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = 4
+        stroke.Parent = textLabel
+        
+        textLabel.Parent = billboard
+        billboard.Parent = playerGui
+        
+        -- Animation setup
+        local floatGoal = {StudsOffset = START_OFFSET + Vector3.new(0, FLOAT_HEIGHT, 0)}
+        local fadeGoal = {TextTransparency = 1}
+        local strokeFadeGoal = {Transparency = 1}
+        
+        local floatTween = TweenService:Create(billboard, TweenInfo.new(TWEEN_DURATION, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out), floatGoal)
+        local fadeTween = TweenService:Create(textLabel, TweenInfo.new(TWEEN_DURATION * 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), fadeGoal)
+        local strokeFadeTween = TweenService:Create(stroke, TweenInfo.new(TWEEN_DURATION * 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), strokeFadeGoal)
+        
+        floatTween:Play()
+        
+        -- Wait a bit before fading out so it stays solid for the first half of the animation
+        task.delay(TWEEN_DURATION * 0.5, function()
+            fadeTween:Play()
+            strokeFadeTween:Play()
+        end)
+        
+        -- Clean up
+        task.delay(TWEEN_DURATION, function()
+            if billboard then billboard:Destroy() end
+        end)
     end)
 end
 

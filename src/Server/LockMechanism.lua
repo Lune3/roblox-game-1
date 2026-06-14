@@ -17,6 +17,10 @@ local UpdateSettingsEvent = Instance.new("RemoteEvent")
 UpdateSettingsEvent.Name = "UpdateSettingsEvent"
 UpdateSettingsEvent.Parent = Shared
 
+local ReactionEvent = Instance.new("RemoteEvent")
+ReactionEvent.Name = "ReactionEvent"
+ReactionEvent.Parent = Shared
+
 -- Table to keep track of locked pairs
 local activeLocks = {}
 
@@ -161,6 +165,9 @@ local function SetupPlayer(player)
         if not player:GetAttribute("ApproachCooldown") then
             player:SetAttribute("ApproachCooldown", 5)
         end
+        if not player:GetAttribute("RizzScore") then
+            player:SetAttribute("RizzScore", 100)
+        end
 
         local hrp = character:WaitForChild("HumanoidRootPart", 5)
         if not hrp then return end
@@ -220,6 +227,50 @@ function LockMechanism.Init()
             local clamped = math.clamp(math.floor(newCooldown), 0, 1000)
             player:SetAttribute("ApproachCooldown", clamped)
             print(player.Name .. " updated their cooldown to " .. clamped .. " seconds.")
+        end
+    end)
+
+    -- Handle Reaction Event
+    local reactionScores = {
+        ["W Rizz"] = 20,
+        ["Smooth"] = 10,
+        ["Neutral"] = 0,
+        ["Awkward"] = -10,
+        ["Cringe"] = -20
+    }
+
+    ReactionEvent.OnServerEvent:Connect(function(player, reactionName)
+        local lockData = activeLocks[player]
+        if not lockData then return end
+        
+        -- Anti-spam cooldown (5 seconds)
+        if lockData.lastReactionTime and (os.time() - lockData.lastReactionTime) < 5 then
+            return
+        end
+        
+        -- Anti-griefing limit: Max 5 reactions per conversation
+        lockData.reactionCount = (lockData.reactionCount or 0) + 1
+        if lockData.reactionCount > 5 then
+            return
+        end
+        
+        lockData.lastReactionTime = os.time()
+        
+        -- The player clicking the reaction is the Target.
+        local approacher = lockData.target
+        local scoreChange = reactionScores[reactionName] or 0
+        
+        if scoreChange ~= 0 then
+            local currentScore = approacher:GetAttribute("RizzScore") or 100
+            approacher:SetAttribute("RizzScore", currentScore + scoreChange)
+            print(approacher.Name .. " Rizz Score updated to " .. (currentScore + scoreChange))
+        end
+        
+        local targetChar = player.Character
+        if targetChar then
+            -- Tell both players to show the floating text behind the target's back
+            ReactionEvent:FireClient(player, targetChar, scoreChange)
+            ReactionEvent:FireClient(approacher, targetChar, scoreChange)
         end
     end)
 end
