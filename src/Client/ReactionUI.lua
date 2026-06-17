@@ -35,7 +35,7 @@ function ReactionUI.Init()
     -- Build the 3D UI for the Matrix
     local uiPart = Instance.new("Part")
     uiPart.Name = "ReactionUIPart"
-    uiPart.Size = Vector3.new(6, 9, 0.1) -- Made larger but further away to avoid camera clipping/blur
+    uiPart.Size = Vector3.new(4.59, 6.885, 0.1) -- Reduced by another 15%
     uiPart.Anchored = true
     uiPart.CanCollide = false
     uiPart.CanQuery = false
@@ -68,27 +68,30 @@ function ReactionUI.Init()
     listLayout.Padding = UDim.new(0, 15)
     listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     listLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder -- Forces it to use our specific order instead of alphabetical
     listLayout.Parent = matrixFrame
 
+    -- Re-added the colors so it's beautifully colored from green to red!
     local options = {
-        "W Rizz",
-        "Smooth",
-        "Neutral",
-        "Awkward",
-        "Cringe"
+        { name = "W Rizz", color = Color3.fromRGB(50, 255, 100) },
+        { name = "Smooth", color = Color3.fromRGB(100, 255, 150) },
+        { name = "Neutral", color = Color3.fromRGB(220, 220, 220) },
+        { name = "Awkward", color = Color3.fromRGB(255, 150, 100) },
+        { name = "Cringe", color = Color3.fromRGB(255, 50, 50) }
     }
 
     local onCooldown = false
 
-    for _, optName in ipairs(options) do
+    for index, opt in ipairs(options) do
         local btn = Instance.new("TextButton")
-        btn.Name = optName .. "Btn"
+        btn.Name = opt.name .. "Btn"
+        btn.LayoutOrder = index -- Explicitly sets the order from top to bottom
         btn.Size = UDim2.new(0.9, 0, 0, 60)
-        btn.Text = optName
+        btn.Text = opt.name
         btn.TextSize = 28
         btn.Font = Enum.Font.GothamBold
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40) -- Dark background
+        btn.TextColor3 = opt.color -- Colored text
         
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0, 6)
@@ -101,7 +104,7 @@ function ReactionUI.Init()
             onCooldown = true
             
             -- UI stays visible, but goes on a local 5-second cooldown
-            ReactionEvent:FireServer(optName)
+            ReactionEvent:FireServer(opt.name)
             
             task.delay(5, function()
                 onCooldown = false
@@ -126,7 +129,7 @@ function ReactionUI.Init()
             local offsetX = 8
             local offsetY = -1
             local offsetZ = -10
-            local slantAngle = 15 -- Degrees it tilts
+            local slantAngle = 10 -- Degrees it tilts
             
             -- We add 180 to the angle so the invisible part's front faces the camera
             local rotation = CFrame.Angles(0, math.rad(180 + slantAngle), 0)
@@ -223,6 +226,9 @@ function ReactionUI.Init()
 
     -- Listen for server to show floating text
     ReactionEvent.OnClientEvent:Connect(function(targetChar, scoreChange)
+        -- Hide the floating number from the Target's own screen!
+        if player.Character == targetChar then return end
+        
         local hrp = targetChar:FindFirstChild("HumanoidRootPart")
         if not hrp then return end
 

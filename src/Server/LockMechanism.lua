@@ -1,6 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-
 local LockMechanism = {}
 
 local APPROACH_DISTANCE = 10
@@ -8,6 +7,7 @@ local HOLD_DURATION = 1
 local DEFAULT_APPROACHER_COOLDOWN = 10 -- 10 seconds default spam cooldown
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local ChatManager = require(script.Parent:WaitForChild("ChatManager"))
 
 local ReleaseLockEvent = Instance.new("RemoteEvent")
 ReleaseLockEvent.Name = "ReleaseLockEvent"
@@ -58,7 +58,7 @@ local function LockPlayers(approacher, target)
     humB.WalkSpeed = 0
     humB.JumpPower = 0
 
-    -- Force them to face each other
+    -- Force them to face each other (keeping Y axis flat so they don't tilt up/down)
     local posA = hrpA.Position
     local posB = hrpB.Position
     
@@ -86,6 +86,9 @@ local function LockPlayers(approacher, target)
     -- Tell BOTH players to show their UI!
     ReleaseLockEvent:FireClient(target, "Show", false) -- isApproacher = false
     ReleaseLockEvent:FireClient(approacher, "Show", true)  -- isApproacher = true
+    
+    -- Create Private Chat Session
+    ChatManager.CreatePrivateSession(approacher, target)
 end
 
 -- Global function to unlock whoever the player is currently locked to
@@ -108,6 +111,9 @@ local function UnlockPlayer(player)
     if activeLocks[target].isApproacher then
         target:SetAttribute("NextApproachTime", os.time() + DEFAULT_APPROACHER_COOLDOWN)
     end
+    
+    -- End Private Chat Session
+    ChatManager.EndPrivateSession(player, target)
 
     -- Remove from lock table
     activeLocks[player] = nil
@@ -268,9 +274,8 @@ function LockMechanism.Init()
         
         local targetChar = player.Character
         if targetChar then
-            -- Tell both players to show the floating text behind the target's back
-            ReactionEvent:FireClient(player, targetChar, scoreChange)
-            ReactionEvent:FireClient(approacher, targetChar, scoreChange)
+            -- Tell everyone in the server
+            ReactionEvent:FireAllClients(targetChar, scoreChange)
         end
     end)
 end

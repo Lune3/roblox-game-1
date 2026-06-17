@@ -35,3 +35,23 @@ ReactionUI.Init()
 local SettingsUI = require(script.Parent:WaitForChild("SettingsUI"))
 SettingsUI.Init()
 
+-- Handle Private Text Chat switching
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+
+local ChatSwitchEvent = Shared:WaitForChild("ChatSwitchEvent")
+
+ChatSwitchEvent.OnClientEvent:Connect(function(channelName)
+    local chatInputBar = TextChatService:FindFirstChild("ChatInputBarConfiguration")
+    if chatInputBar then
+        local textChannels = TextChatService:WaitForChild("TextChannels")
+        -- If switching back to general, the channel is RBXGeneral
+        local targetChannel = textChannels:WaitForChild(channelName, 5)
+        if targetChannel then
+            chatInputBar.TargetTextChannel = targetChannel
+            print("Switched chat channel to: " .. channelName)
+        end
+    end
+end)
+

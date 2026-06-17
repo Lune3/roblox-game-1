@@ -57,7 +57,7 @@ function SettingsUI.Init()
     local inputField = Instance.new("TextBox")
     inputField.Size = UDim2.new(1, -20, 0, 40)
     inputField.Position = UDim2.new(0, 10, 0, 90)
-    inputField.Text = tostring(player:GetAttribute("ApproachCooldown") or 5)
+    inputField.Text = tostring(player:GetAttribute("ApproachCooldown") or 10)
     inputField.TextSize = 18
     inputField.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     inputField.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -71,11 +71,11 @@ function SettingsUI.Init()
     applyBtn.TextSize = 18
     applyBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 40)
     applyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    applyBtn.Parent = panel
+    applyBtn.Parent = panel 
 
     openBtn.MouseButton1Click:Connect(function()
         panel.Visible = not panel.Visible
-        inputField.Text = tostring(player:GetAttribute("ApproachCooldown") or 5)
+        inputField.Text = tostring(player:GetAttribute("ApproachCooldown") or 10)
     end)
 
     applyBtn.MouseButton1Click:Connect(function()
