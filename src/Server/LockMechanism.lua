@@ -47,6 +47,12 @@ local function LockPlayers(approacher, target)
     if (hrpA.Position - hrpB.Position).Magnitude > APPROACH_DISTANCE then return end
 
     print(approacher.Name .. " has locked in with " .. target.Name)
+    
+    local currApp = approacher:GetAttribute("TotalApproaches") or 0
+    approacher:SetAttribute("TotalApproaches", currApp + 1)
+    
+    local currTargeted = target:GetAttribute("TotalApproached") or 0
+    target:SetAttribute("TotalApproached", currTargeted + 1)
 
     -- Mark them as locked
     charA:SetAttribute("IsLocked", true)
@@ -265,6 +271,38 @@ function LockMechanism.Init()
         -- The player clicking the reaction is the Target.
         local approacher = lockData.target
         local scoreChange = reactionScores[reactionName] or 0
+        
+        -- Anti-Abuse: Diminishing Returns
+        local DataManager = require(script.Parent:WaitForChild("DataManager"))
+        local profile = DataManager.GetProfile(player) -- player is Player B (the target voting)
+        
+        if profile and scoreChange ~= 0 then
+            local targetIdString = tostring(approacher.UserId)
+            local voteData = profile.Data.LastVoted[targetIdString]
+            
+            if not voteData then
+                voteData = { count = 0, timestamp = os.time() }
+                profile.Data.LastVoted[targetIdString] = voteData
+            end
+            
+            -- Reset if 24 hours have passed
+            if os.time() - voteData.timestamp > 86400 then
+                voteData.count = 0
+                voteData.timestamp = os.time()
+            end
+            
+            voteData.count = voteData.count + 1
+            
+            local multiplier = 1
+            if voteData.count == 2 then multiplier = 0.5
+            elseif voteData.count == 3 then multiplier = 0.25
+            elseif voteData.count >= 4 then multiplier = 0 end
+            
+            scoreChange = math.floor(scoreChange * multiplier)
+            if multiplier < 1 then
+                print(player.Name .. " diminishing returns applied. Multiplier: " .. multiplier)
+            end
+        end
         
         if scoreChange ~= 0 then
             local currentScore = approacher:GetAttribute("RizzScore") or 100
