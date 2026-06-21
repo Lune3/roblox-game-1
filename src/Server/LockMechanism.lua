@@ -78,9 +78,57 @@ local function LockPlayers(approacher, target)
     hrpA.Anchored = true
     hrpB.Anchored = true
 
-    -- Store the lock in the dictionary with roles
-    activeLocks[approacher] = { target = target, isApproacher = true }
-    activeLocks[target] = { target = approacher, isApproacher = false }
+    -- Calculate Session Count for Diminishing Returns
+    local DataManager = require(script.Parent:WaitForChild("DataManager"))
+    local profileA = DataManager.GetProfile(approacher)
+    local profileB = DataManager.GetProfile(target)
+    
+    local sessionCountA = 1
+    local sessionCountB = 1
+    
+    if profileA then
+        local targetIdStr = tostring(target.UserId)
+        local voteData = profileA.Data.LastVoted[targetIdStr]
+        if not voteData then
+            voteData = { count = 0, timestamp = os.time() }
+            profileA.Data.LastVoted[targetIdStr] = voteData
+        end
+        if os.time() - voteData.timestamp > 86400 then
+            voteData.count = 0
+        end
+        voteData.count = voteData.count + 1
+        voteData.timestamp = os.time()
+        sessionCountA = voteData.count
+    end
+    
+    if profileB then
+        local approacherIdStr = tostring(approacher.UserId)
+        local voteData = profileB.Data.LastVoted[approacherIdStr]
+        if not voteData then
+            voteData = { count = 0, timestamp = os.time() }
+            profileB.Data.LastVoted[approacherIdStr] = voteData
+        end
+        if os.time() - voteData.timestamp > 86400 then
+            voteData.count = 0
+        end
+        voteData.count = voteData.count + 1
+        voteData.timestamp = os.time()
+        sessionCountB = voteData.count
+    end
+
+    -- Store the lock in the dictionary with roles and a unique timestamp
+    local currentLockTime = os.time()
+    activeLocks[approacher] = { target = target, isApproacher = true, sessionCount = sessionCountA, lockTime = currentLockTime }
+    activeLocks[target] = { target = approacher, isApproacher = false, sessionCount = sessionCountB, lockTime = currentLockTime }
+    
+    -- AFK Timer: Auto-unlock after 5 minutes (300 seconds)
+    task.delay(300, function()
+        local lockData = activeLocks[approacher]
+        if lockData and lockData.target == target and lockData.lockTime == currentLockTime then
+            print("5 minute AFK limit reached. Auto-unlocking " .. approacher.Name .. " and " .. target.Name)
+            UnlockPlayer(approacher)
+        end
+    end)
 
     -- Disable both of their ProximityPrompts so no one else can interact with them
     local promptA = hrpA:FindFirstChild("ApproachPrompt")
@@ -272,35 +320,17 @@ function LockMechanism.Init()
         local approacher = lockData.target
         local scoreChange = reactionScores[reactionName] or 0
         
-        -- Anti-Abuse: Diminishing Returns
-        local DataManager = require(script.Parent:WaitForChild("DataManager"))
-        local profile = DataManager.GetProfile(player) -- player is Player B (the target voting)
-        
-        if profile and scoreChange ~= 0 then
-            local targetIdString = tostring(approacher.UserId)
-            local voteData = profile.Data.LastVoted[targetIdString]
-            
-            if not voteData then
-                voteData = { count = 0, timestamp = os.time() }
-                profile.Data.LastVoted[targetIdString] = voteData
-            end
-            
-            -- Reset if 24 hours have passed
-            if os.time() - voteData.timestamp > 86400 then
-                voteData.count = 0
-                voteData.timestamp = os.time()
-            end
-            
-            voteData.count = voteData.count + 1
-            
+        -- Anti-Abuse: Diminishing Returns (Calculated per session, not per reaction)
+        if scoreChange ~= 0 then
+            local sessionCount = lockData.sessionCount or 1
             local multiplier = 1
-            if voteData.count == 2 then multiplier = 0.5
-            elseif voteData.count == 3 then multiplier = 0.25
-            elseif voteData.count >= 4 then multiplier = 0 end
+            if sessionCount == 2 then multiplier = 0.5
+            elseif sessionCount == 3 then multiplier = 0.25
+            elseif sessionCount >= 4 then multiplier = 0 end
             
             scoreChange = math.floor(scoreChange * multiplier)
             if multiplier < 1 then
-                print(player.Name .. " diminishing returns applied. Multiplier: " .. multiplier)
+                print(player.Name .. " diminishing returns applied. Session Multiplier: " .. multiplier)
             end
         end
         

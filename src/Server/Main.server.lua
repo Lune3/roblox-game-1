@@ -8,3 +8,10 @@ LockMechanism.Init()
 
 local LeaderboardManager = require(script.Parent:WaitForChild("LeaderboardManager"))
 LeaderboardManager.Init()
+
+
+
+
+
+
+ 

@@ -49,8 +49,21 @@ ChatSwitchEvent.OnClientEvent:Connect(function(channelName)
         -- If switching back to general, the channel is RBXGeneral
         local targetChannel = textChannels:WaitForChild(channelName, 5)
         if targetChannel then
-            chatInputBar.TargetTextChannel = targetChannel
-            print("Switched chat channel to: " .. channelName)
+            -- Retry loop: It takes a moment for the server to replicate the TextSource permissions to the client.
+            -- If we set it too early, Roblox ignores it.
+            task.spawn(function()
+                local retries = 0
+                while chatInputBar.TargetTextChannel ~= targetChannel and retries < 10 do
+                    chatInputBar.TargetTextChannel = targetChannel
+                    if chatInputBar.TargetTextChannel ~= targetChannel then
+                        task.wait(0.2)
+                    end
+                    retries = retries + 1
+                end
+                if chatInputBar.TargetTextChannel == targetChannel then
+                    print("Successfully switched chat channel to: " .. channelName)
+                end
+            end)
         end
     end
 end)
