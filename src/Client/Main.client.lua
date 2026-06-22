@@ -68,3 +68,59 @@ ChatSwitchEvent.OnClientEvent:Connect(function(channelName)
     end
 end)
 
+-- === MEGAPHONE UI ===
+local MegaphoneEvent = Shared:WaitForChild("MegaphoneEvent")
+
+-- Create the UI ScreenGui for the Megaphone
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+local megaphoneGui = Instance.new("ScreenGui")
+megaphoneGui.Name = "MegaphoneGui"
+megaphoneGui.Parent = playerGui
+
+local megaphoneBanner = Instance.new("Frame")
+megaphoneBanner.Size = UDim2.new(1, 0, 0, 80)
+megaphoneBanner.Position = UDim2.new(0, 0, -0.2, 0) -- Hidden above screen
+megaphoneBanner.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+megaphoneBanner.BackgroundTransparency = 0.2
+megaphoneBanner.BorderSizePixel = 0
+megaphoneBanner.Parent = megaphoneGui
+
+local megaphoneText = Instance.new("TextLabel")
+megaphoneText.Size = UDim2.new(1, 0, 1, 0)
+megaphoneText.BackgroundTransparency = 1
+megaphoneText.Font = Enum.Font.GothamBold
+megaphoneText.TextSize = 24
+megaphoneText.TextColor3 = Color3.fromRGB(255, 215, 0) -- Gold
+megaphoneText.Text = ""
+megaphoneText.Parent = megaphoneBanner
+
+local TweenService = game:GetService("TweenService")
+
+MegaphoneEvent.OnClientEvent:Connect(function(playerName, message)
+    megaphoneText.Text = "📢 " .. playerName .. " shouts: " .. message
+    
+    -- Slide down
+    local tweenDown = TweenService:Create(megaphoneBanner, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
+    tweenDown:Play()
+    
+    -- Wait 5 seconds, then slide up
+    task.delay(5, function()
+        local tweenUp = TweenService:Create(megaphoneBanner, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0, 0, -0.2, 0)})
+        tweenUp:Play()
+    end)
+end)
+
+-- === CUSTOM CHAT COLORS (VIP) ===
+TextChatService.OnIncomingMessage = function(message)
+    local props = Instance.new("TextChatMessageProperties")
+    
+    if message.TextSource then
+        local player = Players:GetPlayerByUserId(message.TextSource.UserId)
+        if player and player:GetAttribute("OwnsChatColorPass") then
+            -- Add VIP tag and make their prefix Gold!
+            props.PrefixText = "<font color='#FFD700'><b>[VIP]</b></font> " .. message.PrefixText
+        end
+    end
+    
+    return props
+end

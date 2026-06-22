@@ -225,7 +225,7 @@ function ReactionUI.Init()
     end)
 
     -- Listen for server to show floating text
-    ReactionEvent.OnClientEvent:Connect(function(targetChar, scoreChange)
+    ReactionEvent.OnClientEvent:Connect(function(targetChar, scoreChange, reactionName)
         -- Hide the floating number from the Target's own screen!
         if player.Character == targetChar then return end
         

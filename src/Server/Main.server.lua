@@ -9,6 +9,9 @@ LockMechanism.Init()
 local LeaderboardManager = require(script.Parent:WaitForChild("LeaderboardManager"))
 LeaderboardManager.Init()
 
+local MonetizationManager = require(script.Parent:WaitForChild("MonetizationManager"))
+MonetizationManager.Init()
+
 
 
 

@@ -303,8 +303,8 @@ function LockMechanism.Init()
         local lockData = activeLocks[player]
         if not lockData then return end
         
-        -- Anti-spam cooldown (5 seconds)
-        if lockData.lastReactionTime and (os.time() - lockData.lastReactionTime) < 5 then
+        -- Anti-spam cooldown (Set to 0 for testing!)
+        if lockData.lastReactionTime and (os.time() - lockData.lastReactionTime) < 0 then
             return
         end
         
@@ -342,8 +342,8 @@ function LockMechanism.Init()
         
         local targetChar = player.Character
         if targetChar then
-            -- Tell everyone in the server
-            ReactionEvent:FireAllClients(targetChar, scoreChange)
+            -- Tell everyone in the server, now including reactionName for VFX
+            ReactionEvent:FireAllClients(targetChar, scoreChange, reactionName)
         end
     end)
 end
