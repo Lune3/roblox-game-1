@@ -5,8 +5,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local MonetizationManager = {}
 
 -- === REPLACE THESE WITH YOUR REAL IDS FROM ROBLOX.COM ===
-local PRODUCT_MEGAPHONE = 123456789
-local GAMEPASS_CHATCOLOR = 987654321
+local PRODUCT_MEGAPHONE = 3606080166
+local GAMEPASS_CHATCOLOR = 1887220269
 -- ========================================================
 
 -- Ensure the Shared folder and Event exist
