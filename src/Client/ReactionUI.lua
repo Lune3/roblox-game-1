@@ -70,8 +70,8 @@ function ReactionUI.Init()
     local matrixFrame = Instance.new("Frame")
     matrixFrame.Name = "MatrixFrame"
     matrixFrame.Size = UDim2.new(1, 0, 1, 0)
-    matrixFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    matrixFrame.BackgroundTransparency = 0.5
+    matrixFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    matrixFrame.BackgroundTransparency = 0.2
     matrixFrame.Parent = surfaceGui
     
     local matrixCorner = Instance.new("UICorner")
@@ -103,7 +103,7 @@ function ReactionUI.Init()
         btn.Size = UDim2.new(0.9, 0, 0, 60)
         btn.Text = opt.name
         btn.TextSize = 28
-        btn.Font = Enum.Font.GothamBold
+        btn.Font = Enum.Font.BuilderSansBold
         btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40) -- Dark background
         btn.TextColor3 = opt.color -- Colored text
         
@@ -143,7 +143,7 @@ function ReactionUI.Init()
             local offsetX = 8
             local offsetY = -1
             local offsetZ = -10
-            local slantAngle = 10 -- Degrees it tilts
+            local slantAngle = 0 -- Degrees it tilts (Removed tilt to make it flat)
             
             -- We add 180 to the angle so the invisible part's front faces the camera
             local rotation = CFrame.Angles(0, math.rad(180 + slantAngle), 0)
