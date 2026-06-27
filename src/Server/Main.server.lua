@@ -12,6 +12,9 @@ LeaderboardManager.Init()
 local MonetizationManager = require(script.Parent:WaitForChild("MonetizationManager"))
 MonetizationManager.Init()
 
+local NametagManager = require(script.Parent:WaitForChild("NametagManager"))
+NametagManager.Init()
+
 
 
 

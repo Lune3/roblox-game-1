@@ -77,7 +77,7 @@ vipBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
 vipBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 vipBtn.Font = Enum.Font.BuilderSansBold
 vipBtn.TextSize = 14
-vipBtn.Text = "👑 VIP Tag (1 Day)"
+vipBtn.Text = "👑 Rizzler Tag (1 Day)"
 vipBtn.Parent = storeFrame
 
 local vipCorner = Instance.new("UICorner")
