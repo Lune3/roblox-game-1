@@ -124,3 +124,41 @@ TextChatService.OnIncomingMessage = function(message)
     
     return props
 end
+
+-- === COOLDOWN NOTIFICATION UI ===
+local CooldownNotifyEvent = Shared:WaitForChild("CooldownNotifyEvent")
+
+local cooldownNotifyGui = Instance.new("ScreenGui")
+cooldownNotifyGui.Name = "CooldownNotifyGui"
+cooldownNotifyGui.Parent = playerGui
+
+local cooldownNotifyText = Instance.new("TextLabel")
+cooldownNotifyText.Size = UDim2.new(1, 0, 0, 50)
+cooldownNotifyText.Position = UDim2.new(0, 0, 0, -50) -- Hidden above screen
+cooldownNotifyText.BackgroundTransparency = 1
+cooldownNotifyText.Font = Enum.Font.BuilderSansBold
+cooldownNotifyText.TextSize = 28
+cooldownNotifyText.TextColor3 = Color3.fromRGB(255, 50, 50) -- Red
+cooldownNotifyText.TextStrokeTransparency = 0
+cooldownNotifyText.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+cooldownNotifyText.Text = ""
+cooldownNotifyText.Parent = cooldownNotifyGui
+
+local notifyTweenUp, notifyTweenDown
+
+CooldownNotifyEvent.OnClientEvent:Connect(function(message)
+    cooldownNotifyText.Text = message
+    
+    if notifyTweenUp then notifyTweenUp:Cancel() end
+    if notifyTweenDown then notifyTweenDown:Cancel() end
+    
+    -- Slide down
+    notifyTweenDown = TweenService:Create(cooldownNotifyText, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 50)})
+    notifyTweenDown:Play()
+    
+    -- Wait 3 seconds, then slide up
+    task.delay(3, function()
+        notifyTweenUp = TweenService:Create(cooldownNotifyText, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0, 0, 0, -50)})
+        notifyTweenUp:Play()
+    end)
+end)

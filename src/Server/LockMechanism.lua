@@ -21,6 +21,10 @@ local ReactionEvent = Instance.new("RemoteEvent")
 ReactionEvent.Name = "ReactionEvent"
 ReactionEvent.Parent = Shared
 
+local CooldownNotifyEvent = Instance.new("RemoteEvent")
+CooldownNotifyEvent.Name = "CooldownNotifyEvent"
+CooldownNotifyEvent.Parent = Shared
+
 -- Table to keep track of locked pairs
 local activeLocks = {}
 
@@ -253,6 +257,7 @@ local function SetupPlayer(player)
             if nextTime and os.time() < nextTime then
                 local timeLeft = nextTime - os.time()
                 print(triggeringPlayer.Name .. " is on approach cooldown for " .. timeLeft .. " more seconds.")
+                CooldownNotifyEvent:FireClient(triggeringPlayer, "You are on approach cooldown for " .. timeLeft .. "s")
                 return
             end
             
