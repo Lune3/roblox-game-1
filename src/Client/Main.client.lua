@@ -145,20 +145,22 @@ cooldownNotifyText.Text = ""
 cooldownNotifyText.Parent = cooldownNotifyGui
 
 local notifyTweenUp, notifyTweenDown
+local currentNotifyThread = nil
 
 CooldownNotifyEvent.OnClientEvent:Connect(function(message)
     cooldownNotifyText.Text = message
     
     if notifyTweenUp then notifyTweenUp:Cancel() end
     if notifyTweenDown then notifyTweenDown:Cancel() end
+    if currentNotifyThread then task.cancel(currentNotifyThread) end
     
-    -- Slide down
-    notifyTweenDown = TweenService:Create(cooldownNotifyText, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 50)})
+    -- Slide down (smooth quart curve)
+    notifyTweenDown = TweenService:Create(cooldownNotifyText, TweenInfo.new(0.7, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 50)})
     notifyTweenDown:Play()
     
-    -- Wait 3 seconds, then slide up
-    task.delay(3, function()
-        notifyTweenUp = TweenService:Create(cooldownNotifyText, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.new(0, 0, 0, -50)})
+    -- Wait 3 seconds, then slide up off screen
+    currentNotifyThread = task.delay(3, function()
+        notifyTweenUp = TweenService:Create(cooldownNotifyText, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(0, 0, 0, -100)})
         notifyTweenUp:Play()
     end)
 end)

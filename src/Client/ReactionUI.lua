@@ -23,14 +23,27 @@ function ReactionUI.Init()
 
     local notInterestedBtn = Instance.new("TextButton")
     notInterestedBtn.Name = "NotInterestedButton"
-    notInterestedBtn.Size = UDim2.new(0, 200, 0, 50)
-    notInterestedBtn.Position = UDim2.new(0.5, -100, 0.8, 0) -- Bottom center
+    notInterestedBtn.Size = UDim2.new(0, 220, 0, 55) -- Increased width and height slightly
+    notInterestedBtn.AnchorPoint = Vector2.new(0.5, 0)
+    notInterestedBtn.Position = UDim2.new(0.5, 0, 0.8, 0) -- Bottom center
     notInterestedBtn.Text = "Not Interested"
     notInterestedBtn.TextSize = 20
+    notInterestedBtn.Font = Enum.Font.BuilderSansBold
     notInterestedBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
     notInterestedBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     notInterestedBtn.Visible = false
     notInterestedBtn.Parent = screenGui
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 10)
+    btnCorner.Parent = notInterestedBtn
+
+    local btnPadding = Instance.new("UIPadding")
+    btnPadding.PaddingTop = UDim.new(0.03, 0)
+    btnPadding.PaddingBottom = UDim.new(0.03, 0)
+    btnPadding.PaddingLeft = UDim.new(0.03, 0)
+    btnPadding.PaddingRight = UDim.new(0.03, 0)
+    btnPadding.Parent = notInterestedBtn
 
     -- Build the 3D UI for the Matrix
     local uiPart = Instance.new("Part")
