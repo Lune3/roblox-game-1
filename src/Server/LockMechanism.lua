@@ -4,7 +4,6 @@ local LockMechanism = {}
 
 local APPROACH_DISTANCE = 10
 local HOLD_DURATION = 1
-local DEFAULT_APPROACHER_COOLDOWN = 10 -- 10 seconds default spam cooldown
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ChatManager = require(script.Parent:WaitForChild("ChatManager"))
@@ -165,10 +164,10 @@ local function UnlockPlayer(player)
 
     -- Apply Approacher spam cooldown
     if activeLocks[player].isApproacher then
-        player:SetAttribute("NextApproachTime", os.time() + DEFAULT_APPROACHER_COOLDOWN)
+        player:SetAttribute("NextApproachTime", os.time() + Constants.DEFAULT_APPROACHER_COOLDOWN)
     end
     if activeLocks[target].isApproacher then
-        target:SetAttribute("NextApproachTime", os.time() + DEFAULT_APPROACHER_COOLDOWN)
+        target:SetAttribute("NextApproachTime", os.time() + Constants.DEFAULT_APPROACHER_COOLDOWN)
     end
     
     -- End Private Chat Session

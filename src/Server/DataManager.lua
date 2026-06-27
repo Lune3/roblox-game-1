@@ -8,6 +8,7 @@ local ProfileStore = ProfileService.GetProfileStore(
         TotalApproaches = 0,
         TotalApproached = 0,
         LastVoted = {}, -- [tostring(userId)] = timestamp
+        VipExpiration = 0,
     }
 )
 
@@ -43,6 +44,7 @@ function DataManager.Init()
                 player:SetAttribute("RizzScore", profile.Data.RizzScore)
                 player:SetAttribute("TotalApproaches", profile.Data.TotalApproaches)
                 player:SetAttribute("TotalApproached", profile.Data.TotalApproached)
+                player:SetAttribute("VipExpiration", profile.Data.VipExpiration)
                 
                 -- Sync Attributes -> Profile Data automatically
                 player:GetAttributeChangedSignal("RizzScore"):Connect(function()
@@ -54,6 +56,9 @@ function DataManager.Init()
                 end)
                 player:GetAttributeChangedSignal("TotalApproached"):Connect(function()
                     profile.Data.TotalApproached = player:GetAttribute("TotalApproached")
+                end)
+                player:GetAttributeChangedSignal("VipExpiration"):Connect(function()
+                    profile.Data.VipExpiration = player:GetAttribute("VipExpiration")
                 end)
             else
                 profile:Release()

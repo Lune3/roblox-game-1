@@ -6,7 +6,7 @@ local MonetizationManager = {}
 
 -- === REPLACE THESE WITH YOUR REAL IDS FROM ROBLOX.COM ===
 local PRODUCT_MEGAPHONE = 3606080166
-local GAMEPASS_CHATCOLOR = 1887220269
+local PRODUCT_VIP_1DAY = 3606849631
 -- ========================================================
 
 -- Ensure the Shared folder and Event exist
@@ -18,15 +18,32 @@ if not MegaphoneEvent then
     MegaphoneEvent.Parent = Shared
 end
 
+local SetMegaphoneMessageEvent = Shared:FindFirstChild("SetMegaphoneMessageEvent")
+if not SetMegaphoneMessageEvent then
+    SetMegaphoneMessageEvent = Instance.new("RemoteEvent")
+    SetMegaphoneMessageEvent.Name = "SetMegaphoneMessageEvent"
+    SetMegaphoneMessageEvent.Parent = Shared
+end
+
 function MonetizationManager.Init()
-    -- 1. Check Gamepass Ownership on Join
+    -- 1. Check VIP Expiration on Join
     local function onPlayerAdded(player)
-        local success, hasPass = pcall(function()
-            return MarketplaceService:UserOwnsGamePassAsync(player.UserId, GAMEPASS_CHATCOLOR)
+        -- Update chat tag status whenever VipExpiration changes
+        player:GetAttributeChangedSignal("VipExpiration"):Connect(function()
+            local vipExp = player:GetAttribute("VipExpiration") or 0
+            if os.time() < vipExp then
+                player:SetAttribute("OwnsChatColorPass", true)
+            else
+                player:SetAttribute("OwnsChatColorPass", false)
+            end
         end)
         
-        if success and hasPass then
-            player:SetAttribute("OwnsChatColorPass", true)
+        -- Run an initial check in case data loaded before connection
+        if player:GetAttribute("VipExpiration") then
+            local vipExp = player:GetAttribute("VipExpiration") or 0
+            if os.time() < vipExp then
+                player:SetAttribute("OwnsChatColorPass", true)
+            end
         end
     end
 
@@ -34,6 +51,12 @@ function MonetizationManager.Init()
         task.spawn(onPlayerAdded, player)
     end
     Players.PlayerAdded:Connect(onPlayerAdded)
+    
+    SetMegaphoneMessageEvent.OnServerEvent:Connect(function(player, message)
+        if type(message) == "string" then
+            player:SetAttribute("PendingMegaphoneMessage", string.sub(message, 1, 100))
+        end
+    end)
 
     -- 2. Handle Developer Product Purchases
     MarketplaceService.ProcessReceipt = function(receiptInfo)
@@ -44,13 +67,18 @@ function MonetizationManager.Init()
         end
 
         if receiptInfo.ProductId == PRODUCT_MEGAPHONE then
-            -- The player bought the Megaphone! 
-            -- Fire the event to all clients so they show the UI banner.
-            -- Note: We read the custom message from an Attribute they set right before buying.
             local customMessage = player:GetAttribute("PendingMegaphoneMessage") or "Anyone want to lock in?"
             MegaphoneEvent:FireAllClients(player.Name, customMessage)
             
             print(player.Name .. " successfully purchased a Server Megaphone!")
+            return Enum.ProductPurchaseDecision.PurchaseGranted
+        elseif receiptInfo.ProductId == PRODUCT_VIP_1DAY then
+            -- Add 24 hours (86400 seconds) to their VIP expiration
+            local currentExp = player:GetAttribute("VipExpiration") or 0
+            local newExp = math.max(os.time(), currentExp) + 86400
+            player:SetAttribute("VipExpiration", newExp)
+            
+            print(player.Name .. " successfully purchased 1-Day VIP!")
             return Enum.ProductPurchaseDecision.PurchaseGranted
         end
 

@@ -117,8 +117,8 @@ TextChatService.OnIncomingMessage = function(message)
     if message.TextSource then
         local player = Players:GetPlayerByUserId(message.TextSource.UserId)
         if player and player:GetAttribute("OwnsChatColorPass") then
-            -- Add VIP tag and make their prefix Gold!
-            props.PrefixText = "<font color='#FFD700'><b>[VIP]</b></font> " .. message.PrefixText
+            -- Make the [VIP] tag and the Username perfectly golden, overriding the default name format.
+            props.PrefixText = "<font color='#FFD700'><b>[VIP]</b> " .. player.DisplayName .. ":</font>"
         end
     end
     
