@@ -7,6 +7,7 @@ local TweenService = game:GetService("TweenService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ReleaseLockEvent = Shared:WaitForChild("ReleaseLockEvent")
 local ReactionEvent = Shared:WaitForChild("ReactionEvent")
+local Constants = require(Shared:WaitForChild("Constants"))
 
 local ReactionUI = {}
 
@@ -116,10 +117,10 @@ function ReactionUI.Init()
             if onCooldown then return end
             onCooldown = true
             
-            -- UI stays visible, but goes on a local 5-second cooldown
+            -- UI stays visible, but goes on a local cooldown
             ReactionEvent:FireServer(opt.name)
             
-            task.delay(5, function()
+            task.delay(Constants.REACTION_COOLDOWN_CLIENT, function()
                 onCooldown = false
             end)
         end)

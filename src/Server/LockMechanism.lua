@@ -8,6 +8,7 @@ local DEFAULT_APPROACHER_COOLDOWN = 10 -- 10 seconds default spam cooldown
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ChatManager = require(script.Parent:WaitForChild("ChatManager"))
+local Constants = require(Shared:WaitForChild("Constants"))
 
 local ReleaseLockEvent = Instance.new("RemoteEvent")
 ReleaseLockEvent.Name = "ReleaseLockEvent"
@@ -308,14 +309,14 @@ function LockMechanism.Init()
         local lockData = activeLocks[player]
         if not lockData then return end
         
-        -- Anti-spam cooldown (Set to 0 for testing!)
-        if lockData.lastReactionTime and (os.time() - lockData.lastReactionTime) < 0 then
+        -- Anti-spam cooldown
+        if lockData.lastReactionTime and (os.time() - lockData.lastReactionTime) < Constants.REACTION_COOLDOWN_SERVER then
             return
         end
         
-        -- Anti-griefing limit: Max 5 reactions per conversation
+        -- Anti-griefing limit
         lockData.reactionCount = (lockData.reactionCount or 0) + 1
-        if lockData.reactionCount > 5 then
+        if lockData.reactionCount > Constants.REACTION_MAX_VOTES then
             return
         end
         
